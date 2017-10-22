@@ -51,7 +51,7 @@ def pickleWriter(filename, Obj):
             pickleFile.close()
             return True
         except: 
-            print('write to file failed!')
+#            print('write to file failed!')
             return False
 c6=Bot(command_prefix='^')
 @c6.event
@@ -59,7 +59,7 @@ async def on_ready():
     global posts, eventIDs, eventDict, reactEmoji
     readF=pickleReader(eventFile)
     if readF:
-        print('pickle found, loading.')
+#        print('pickle found, loading.')
         eventDict=readF
         reactEmoji=setEmojiStack(eventDict['server'])
         posts=list()
@@ -71,11 +71,11 @@ async def on_ready():
                 posts.append(event['message'].id)
                 eventIDs.append(event['eventID'])
                 await getOfflineReactions(event)
-            else:
-                print('skipping completed event')
-        print('%i events loaded from pickle.' % len(posts))
+#            else:
+#                print('skipping completed event')
+#        print('%i events loaded from pickle.' % len(posts))
     else:
-        print('no pickle file detected!')
+#        print('no pickle file detected!')
         eventDict={
             'server':discord.utils.get(c6.servers, id='223519936935362561'), 
             'index':0,
@@ -84,6 +84,7 @@ async def on_ready():
         reactEmoji=setEmojiStack(eventDict['server'])
         posts=[]
         eventIDs=[]
+    print('ready.')
 @c6.command(pass_context=True)
 async def crucible(msg, sTime=0):
     message=msg.message
@@ -134,7 +135,7 @@ async def makeEvent(message, start, Type, game):
     data['game']=game
     data['teamSize']=teamSizes[data['type']]
     data['message']=await createAdv(data)
-    print(data['message'].id) 
+#    print(data['message'].id) 
     eventDict['events'].append(data)
     posts.append(data['message'].id)
     eventIDs.append(data['eventID'])
@@ -182,15 +183,15 @@ async def show(msg, sub=None):
             if (event['complete'] == False) and (event['channel']==msg.message.channel): 
                 await updateEvent(event)
 async def createAdv(data):
-    for emoji in reactEmoji[data['game']]:
-        print(emoji)
+#    for emoji in reactEmoji[data['game']]:
+#        print(emoji)
     channel=data['channel']
     if data['complete']:
         card=c6embed.closeEventEmbed(data)
     else:
         card=c6embed.createAdvEmbed(data)
     eventPost=await c6.send_message(channel, '', embed=card)
-    print("id inside createPost: %s" % eventPost.id)
+#    print("id inside createPost: %s" % eventPost.id)
     if data['complete']:
         return eventPost
     else:
@@ -216,14 +217,14 @@ async def updateEvent(data):
 async def on_reaction_add(reaction, user):
     global posts
     if reaction.message.id in posts: 
-        print(posts)
+#        print(posts)
         member=reaction.message.server.get_member(user.id)
         emoji=reaction.emoji
-        if user.id==bot.id: 
-            print('ignoring self')
+        if member==reaction.message.author: 
+#            print('ignoring self')
             return 
         else:
-            print("member id inside on_reaction_add %s" %member.id )
+#            print("member id inside on_reaction_add %s" %member.id )
             await c6.remove_reaction(message=reaction.message, emoji=reaction.emoji, member=member )
             update=None
             for event in eventDict['events']:
@@ -236,15 +237,15 @@ async def getOfflineReactions(event):
     for emoji in reactEmoji[event['game']]:
         reaction=discord.Reaction(message=event['message'], emoji=emoji)
         reactObj.append(reaction)
-    print('getting offline reactions for %s' % event['eventID'])
+#    print('getting offline reactions for %s' % event['eventID'])
     update=None
     for reaction in reactObj:
-        print("parsing %s reactions" % reaction.emoji.name)
+#        print("parsing %s reactions" % reaction.emoji.name)
         users=await c6.get_reaction_users(reaction, limit=100)
         for user in users:
             if user != event['bot']:
-                print('parsing %s reaction from %s on event post %s' 
-                      % (reaction.emoji.name, user.name, event['eventID']))
+#                print('parsing %s reaction from %s on event post %s' 
+#                      % (reaction.emoji.name, user.name, event['eventID']))
                 member=reaction.message.server.get_member(user.id)
                 emoji=reaction.emoji
                 message=reaction.message
@@ -254,32 +255,31 @@ async def getOfflineReactions(event):
                     update=await parseReaction(emoji, member, event)
                     if update==None: 
                         update=old
-            else: 
-                print('ignoring self-reaction')
+#               print('ignoring self-reaction')
     if update and (update != None):
         await updateEvent(update)
 async def parseReaction(emoji, member, data):
     if emoji.name=='brooksphone':
         await remind(data)
     if emoji in reactEmoji[data['game']]:
-        print('%s icon in recognized reaction emoji' % emoji.name)
+#      print('%s icon in recognized reaction emoji' % emoji.name)
         if (emoji.name =='darkness') or (emoji.name=='cl4ptp'):
             if data['leader'].id==member.id:
-                print('member is event leader')
+#             print('member is event leader')
                 data['complete']=True
                 if len(data['players'])>=1:
                     await updateEvent(data)
                 else:
                     await c6.delete_message(data['message'])
-                print('event lost in the dark corners of time')
+#                print('event lost in the dark corners of time')
                 return False
             else:
                 return None 
         else:
             userTuple=(member, emoji)
-            print(len(data['players'])-1)    
+#            print(len(data['players'])-1)    
             if userTuple in data['players']:
-                print('removing %s: %s from event' % (userTuple[0].name, userTuple[1].name))
+#                print('removing %s: %s from event' % (userTuple[0].name, userTuple[1].name))
                 data['players'].remove(userTuple)
                 return data
             if userTuple in data['players']:
@@ -291,11 +291,11 @@ async def parseReaction(emoji, member, data):
                     data['players'][indx]=userTuple
                     return data
             if len(data['players'])<data['teamSize']:
-                print('adding %s: %s to event' % (userTuple[0].name, userTuple[1].name))
+#                print('adding %s: %s to event' % (userTuple[0].name, userTuple[1].name))
                 data['players'].append(userTuple)
                 return data
     else:
         return None
 token=sttngs['token']
-print(token)
+#print(token)
 c6.run(token)
