@@ -56,9 +56,8 @@ def pickleWriter(filename, Obj):
 c6=Bot(command_prefix='^')
 @c6.event
 async def on_ready():
-    global bot, posts, eventIDs, eventDict, reactEmoji
+    global posts, eventIDs, eventDict, reactEmoji
     readF=pickleReader(eventFile)
-    bot=await c6.get_user_info('326270253384597505')
     if readF:
         print('pickle found, loading.')
         eventDict=readF
@@ -124,10 +123,9 @@ async def leviathan(msg, sTime=0):
 async def makeEvent(message, start, Type, game):
     global eventDict, posts, eventIDs
     data=copy.deepcopy(Data)
-    botUser=discord.utils.get(message.server.members, id='326270253384597505')
     data['start']=start
     data['channel']=message.channel
-    data['bot']=botUser
+    data['bot']=message.server.get_member(c6.user.id)
     data['leader']=message.author
     eventID='%s%s%i' % (Type[0], game[0], eventDict['index'])
     eventDict['index']=eventDict['index']+1
