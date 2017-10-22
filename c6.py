@@ -132,7 +132,7 @@ async def makeEvent(message, start, Type, game):
     data['channel']=message.channel
     data['bot']=botUser
     data['leader']=message.author
-    raidID='%s%i' % (type, raidDict['index'])
+    raidID='%s%s%i' % (Type[0], game[0], raidDict['index'])
     raidDict['index']=raidDict['index']+1
     data['raidID']=raidID
     data['type']=Type
@@ -145,14 +145,15 @@ async def makeEvent(message, start, Type, game):
     raidIDs.append(data['raidID'])
     pickleWriter(raidFile, raidDict)
 async def remind(raid): 
-    await c6.send_typing(raid['channel'])
-    await asyncio.sleep(5)
-    reminderString="%s event reminder! players: " % raid['type']
-    for playerTuple in raid['players']:
-        reminderString=reminderString+'%s, ' % playerTuple[0].mention
-    start=datetime.datetime.fromtimestamp(raid['start']).strftime('%I:%m%p %a')
-    reminderString=reminderString+'Leader:%s starting at %s.' % (raid['leader'].mention, start)
-    await c6.send_message(raid['channel'], reminderString)
+    if (len(raid['players'])>0) and ((raid['start']-time.time())>0):
+        await c6.send_typing(raid['channel'])
+        await asyncio.sleep(5)
+        reminderString="%s event reminder! players: " % raid['type']
+        for playerTuple in raid['players']:
+            reminderString=reminderString+'%s, ' % playerTuple[0].mention
+        start=datetime.datetime.fromtimestamp(raid['start']).strftime('%I:%m%p %a')
+        reminderString=reminderString+'Leader:%s starting at %s.' % (raid['leader'].mention, start)
+        await c6.send_message(raid['channel'], reminderString)
 @c6.command(pass_context=True)
 async def show(msg, sub=None):
     if sub!=None: 
@@ -233,7 +234,6 @@ async def createAdv(data):
     if data['complete']:
         return raidPost
     else:
-        print((data['start']-time.time()))
         for emoji in reactEmoji[data['game']]:
             await c6.add_reaction(raidPost, emoji)
         if ((data['start']-time.time())>=0) and ((data['start']-time.time())<1800):
