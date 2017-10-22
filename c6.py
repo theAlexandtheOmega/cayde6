@@ -11,7 +11,7 @@ teamSizes={
             'crucible':4, 
             'borderlands2':4
             }
-data={
+Data={
         'message':None,
         'leader':None, 
         'bot':None, 
@@ -90,103 +90,59 @@ async def on_ready():
         raidIDs=[]
 @c6.command(pass_context=True)
 async def crucible(msg, sTime=0):
-    global raidDict, posts, raidIDs
     message=msg.message
-    botUser=discord.utils.get(message.server.members, id='326270253384597505')
-    raidData=copy.deepcopy(data)
+    game='destiny'
+    Type='crucible'
     if isinstance(sTime, int):
         offset=sTime*60
         start=time.time()+offset
-        raidData['start']=start
-    raidData['channel']=message.channel
-    raidData['bot']=botUser
-    raidData['leader']=message.author
-    raidID='crucible%i' % raidDict['index']
-    raidDict['index']=raidDict['index']+1
-    raidData['raidID']=raidID
-    raidData['type']='crucible'
-    raidData['game']='destiny'
-    raidData['teamSize']=teamSizes[raidData['type']]
-    raidData['message']=await createAdv(raidData)
-    print(raidData['message'].id) 
-    raidDict['raids'].append(raidData)
-    posts.append(raidData['message'].id)
-    raidIDs.append(raidData['raidID'])
-    pickleWriter(raidFile, raidDict)
+    await makeEvent(message, start, Type, game)
 @c6.command(pass_context=True)
 async def borderlands2(msg, sTime=0):
-    global raidDict, posts, raidIDs
     message=msg.message
-    botUser=discord.utils.get(message.server.members, id='326270253384597505')
-    raidData=copy.deepcopy(data)
+    game='borderlands2'
+    Type='borderlands2'
     if isinstance(sTime, int):
         offset=sTime*60
         start=time.time()+offset
-        raidData['start']=start
-    raidData['channel']=message.channel
-    raidData['bot']=botUser
-    raidData['leader']=message.author
-    raidID='borderlands2%i' % raidDict['index']
-    raidDict['index']=raidDict['index']+1
-    raidData['raidID']=raidID
-    raidData['type']='borderlands2'
-    raidData['game']='borderlands2'
-    raidData['teamSize']=teamSizes[raidData['type']]
-    raidData['message']=await createAdv(raidData)
-    print(raidData['message'].id) 
-    raidDict['raids'].append(raidData)
-    posts.append(raidData['message'].id)
-    raidIDs.append(raidData['raidID'])
-    pickleWriter(raidFile, raidDict)
+    await makeEvent(message, start, Type, game)
 @c6.command(pass_context=True)
 async def nightfall(msg, sTime=0):
-    global raidDict, posts, raidIDs
     message=msg.message
-    botUser=discord.utils.get(message.server.members, id='326270253384597505')
-    raidData=copy.deepcopy(data)
+    game='destiny'
+    Type='nightfall'
     if isinstance(sTime, int):
         offset=sTime*60
         start=time.time()+offset
-        raidData['start']=start
-    raidData['channel']=message.channel
-    raidData['bot']=botUser
-    raidData['leader']=message.author
-    raidID='nightfall%i' % raidDict['index']
-    raidDict['index']=raidDict['index']+1
-    raidData['raidID']=raidID
-    raidData['type']='nightfall'
-    raidData['game']='destiny'
-    raidData['teamSize']=teamSizes[raidData['type']]
-    raidData['message']=await createAdv(raidData)
-    print(raidData['message'].id) 
-    raidDict['raids'].append(raidData)
-    posts.append(raidData['message'].id)
-    raidIDs.append(raidData['raidID'])
-    pickleWriter(raidFile, raidDict)
+    await makeEvent(message, start, Type, game)
 @c6.command(pass_context=True)
 async def raid(msg, sTime=0):
-    global raidDict, posts, raidIDs
     message=msg.message
-    botUser=discord.utils.get(message.server.members, id='326270253384597505')
-    raidData=copy.deepcopy(data)
+    game='destiny'
+    Type='leviathan'
     if isinstance(sTime, int):
         offset=sTime*60
         start=time.time()+offset
-        raidData['start']=start
-    raidData['channel']=message.channel
-    raidData['bot']=botUser
-    raidData['leader']=message.author
-    raidID='leviathan%i' % raidDict['index']
+    await makeEvent(message, start, Type, game)
+async def makeEvent(message, start, Type, game):
+    global raidDict, posts, raidIDs
+    data=copy.deepcopy(Data)
+    botUser=discord.utils.get(message.server.members, id='326270253384597505')
+    data['start']=start
+    data['channel']=message.channel
+    data['bot']=botUser
+    data['leader']=message.author
+    raidID='%s%i' % (type, raidDict['index'])
     raidDict['index']=raidDict['index']+1
-    raidData['raidID']=raidID
-    raidData['type']='leviathan'
-    raidData['game']='destiny'
-    raidData['teamSize']=teamSizes[raidData['type']]
-    raidData['message']=await createAdv(raidData)
-    print(raidData['message'].id) 
-    raidDict['raids'].append(raidData)
-    posts.append(raidData['message'].id)
-    raidIDs.append(raidData['raidID'])
+    data['raidID']=raidID
+    data['type']=Type
+    data['game']=game
+    data['teamSize']=teamSizes[data['type']]
+    data['message']=await createAdv(data)
+    print(data['message'].id) 
+    raidDict['raids'].append(data)
+    posts.append(data['message'].id)
+    raidIDs.append(data['raidID'])
     pickleWriter(raidFile, raidDict)
 async def remind(raid): 
     await c6.send_typing(raid['channel'])
@@ -345,7 +301,6 @@ async def getOfflineReactions(raid):
     if update and (update != None):
         await updateRaid(update)
 async def parseReaction(emoji, member, data):
-#    if  emoji.name in reactEmojis.keys():
     if emoji.name=='brooksphone':
         await remind(data)
     if emoji in reactEmoji[data['game']]:
