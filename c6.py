@@ -114,7 +114,7 @@ async def nightfall(msg, sTime=0):
         start=time.time()+offset
     await makeEvent(message, start, Type, game)
 @c6.command(pass_context=True)
-async def event(msg, sTime=0):
+async def leviathan(msg, sTime=0):
     message=msg.message
     game='destiny'
     Type='leviathan'
