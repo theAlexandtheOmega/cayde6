@@ -377,7 +377,7 @@ async def parseReaction(emoji, member, data):
                     indx=data['players'].index(player)
                     data['players'][indx]=userTuple
                     return data
-            if len(data['players'])<6:
+            if len(data['players'])<data['teamSize']:
                 print('adding %s: %s to raid' % (userTuple[0].name, userTuple[1].name))
                 data['players'].append(userTuple)
                 return data
