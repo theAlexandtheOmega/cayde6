@@ -1,0 +1,11 @@
+#!/usr/bin/python3
+def Settings():
+    settingsArray={'token':<token from discord.gg/developers>,
+                   'owner':<your discord id>}
+    return settingsArray
+
+
+
+
+
+
