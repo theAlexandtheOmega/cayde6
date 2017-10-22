@@ -2,8 +2,8 @@
 import discord, copy, asyncio, pickle, time, datetime
 import c6embed, settings
 from discord.ext.commands import Bot
-global posts, raidIDs, raidDict, bot
-raidFile='data/raids.pkl'
+global posts, eventIDs, eventDict, bot
+eventFile='data/events.pkl'
 sttngs=settings.Settings()
 teamSizes={
             'leviathan':6,
@@ -56,38 +56,36 @@ def pickleWriter(filename, Obj):
 c6=Bot(command_prefix='^')
 @c6.event
 async def on_ready():
-    global bot, posts, raidIDs, raidDict, reactEmoji
-    readF=pickleReader(raidFile)
+    global bot, posts, eventIDs, eventDict, reactEmoji
+    readF=pickleReader(eventFile)
     bot=await c6.get_user_info('326270253384597505')
     if readF:
         print('pickle found, loading.')
-        raidDict=readF
-        reactEmoji=setEmojiStack(raidDict['server'])
+        eventDict=readF
+        reactEmoji=setEmojiStack(eventDict['server'])
         posts=list()
-        raidIDs=list()
-        for raid in raidDict['raids']:
-            if raid['complete']==False:
-                print(raid)
-                msg=raid['message'].id
-                print(msg)
-                message=await c6.get_message(raid['message'].channel, id=raid['message'].id)                
+        eventIDs=list()
+        for event in eventDict['events']:
+            if event['complete']==False:
+                msg=event['message'].id
+                message=await c6.get_message(event['message'].channel, id=event['message'].id)                
                 c6.messages.append(message)
-                posts.append(raid['message'].id)
-                raidIDs.append(raid['raidID'])
-                await getOfflineReactions(raid)
+                posts.append(event['message'].id)
+                eventIDs.append(event['eventID'])
+                await getOfflineReactions(event)
             else:
-                print('skipping completed raid')
-        print('%i raids loaded from pickle.' % len(posts))
+                print('skipping completed event')
+        print('%i events loaded from pickle.' % len(posts))
     else:
         print('no pickle file detected!')
-        raidDict={
+        eventDict={
             'server':discord.utils.get(c6.servers, id='223519936935362561'), 
             'index':0,
-            'raids':list()
+            'events':list()
             }
-        reactEmoji=setEmojiStack(raidDict['server'])
+        reactEmoji=setEmojiStack(eventDict['server'])
         posts=[]
-        raidIDs=[]
+        eventIDs=[]
 @c6.command(pass_context=True)
 async def crucible(msg, sTime=0):
     message=msg.message
@@ -116,7 +114,7 @@ async def nightfall(msg, sTime=0):
         start=time.time()+offset
     await makeEvent(message, start, Type, game)
 @c6.command(pass_context=True)
-async def raid(msg, sTime=0):
+async def event(msg, sTime=0):
     message=msg.message
     game='destiny'
     Type='leviathan'
@@ -125,137 +123,136 @@ async def raid(msg, sTime=0):
         start=time.time()+offset
     await makeEvent(message, start, Type, game)
 async def makeEvent(message, start, Type, game):
-    global raidDict, posts, raidIDs
+    global eventDict, posts, eventIDs
     data=copy.deepcopy(Data)
     botUser=discord.utils.get(message.server.members, id='326270253384597505')
     data['start']=start
     data['channel']=message.channel
     data['bot']=botUser
     data['leader']=message.author
-    raidID='%s%s%i' % (Type[0], game[0], raidDict['index'])
-    raidDict['index']=raidDict['index']+1
-    data['raidID']=raidID
+    eventID='%s%s%i' % (Type[0], game[0], eventDict['index'])
+    eventDict['index']=eventDict['index']+1
+    data['eventID']=eventID
     data['type']=Type
     data['game']=game
     data['teamSize']=teamSizes[data['type']]
     data['message']=await createAdv(data)
     print(data['message'].id) 
-    raidDict['raids'].append(data)
+    eventDict['events'].append(data)
     posts.append(data['message'].id)
-    raidIDs.append(data['raidID'])
-    pickleWriter(raidFile, raidDict)
-async def remind(raid): 
-    if (len(raid['players'])>0) and ((raid['start']-time.time())>0):
-        await c6.send_typing(raid['channel'])
+    eventIDs.append(data['eventID'])
+    pickleWriter(eventFile, eventDict)
+async def remind(event): 
+    if (len(event['players'])>0) and ((event['start']-time.time())>0):
+        await c6.send_typing(event['channel'])
         await asyncio.sleep(5)
-        reminderString="%s event reminder! players: " % raid['type']
-        for playerTuple in raid['players']:
+        reminderString="%s event reminder! players: " % event['type']
+        for playerTuple in event['players']:
             reminderString=reminderString+'%s, ' % playerTuple[0].mention
-        start=datetime.datetime.fromtimestamp(raid['start']).strftime('%I:%m%p %a')
-        reminderString=reminderString+'Leader:%s starting at %s.' % (raid['leader'].mention, start)
-        await c6.send_message(raid['channel'], reminderString)
+        start=datetime.datetime.fromtimestamp(event['start']).strftime('%I:%m%p %a')
+        reminderString=reminderString+'Leader:%s starting at %s.' % (event['leader'].mention, start)
+        await c6.send_message(event['channel'], reminderString)
 @c6.command(pass_context=True)
 async def show(msg, sub=None):
     if sub!=None: 
-        if sub in raidIDs:
-            for raid in raidDict['raids']:
-                if raid['raidID']==sub:
-                    await updateRaid(raid)
+        if sub in eventIDs:
+            for event in eventDict['events']:
+                if event['eventID']==sub:
+                    await updateEvent(event)
         elif sub=='board':
             await c6.send_typing(msg.message.channel)
             await asyncio.sleep(3)
-            raidList=list()
-            for raid in raidDict['raids']: 
-                if raid['channel']==msg.message.channel: 
-                    raidList.append(raid)
-            if len(raidList)>0: 
-                card=c6embed.createBoardEmbed(raidList)
+            eventList=list()
+            for event in eventDict['events']: 
+                if event['channel']==msg.message.channel: 
+                    eventList.append(event)
+            if len(eventList)>0: 
+                card=c6embed.createBoardEmbed(eventList)
                 await c6.send_message(msg.message.channel, '', embed=card)
             else:
-                c6.say('No raids found for this channel! Create one with ^newRaid!')
+                c6.say('No events found for this channel! Create one with ^newRaid!')
         elif sub=='mine':
             await c6.send_typing(msg.message.channel)
             await asyncio.sleep(5)
-            raidList=list()
-            for raid in raidDict['raids']: 
-                if (raid['channel']==msg.message.channel):
-                    if (raid['leader']==msg.message.author): 
-                        raidList.append(raid)
+            eventList=list()
+            for event in eventDict['events']: 
+                if (event['channel']==msg.message.channel):
+                    if (event['leader']==msg.message.author): 
+                        eventList.append(event)
                     else:
-                        for playerTuple in raid['players']:
+                        for playerTuple in event['players']:
                             if playerTuple[0]==msg.message.author: 
-                                raidList.append(raid)
-            if len(raidList)>0: 
-                card=c6embed.createBoardEmbed(raidList)
+                                eventList.append(event)
+            if len(eventList)>0: 
+                card=c6embed.createBoardEmbed(eventList)
                 await c6.send_message(msg.message.channel, '', embed=card)
             else:
-                c6.say("You don't seem to be involved in any raids from this channel! Create one with ^newRaid!")
+                c6.say("You don't seem to be involved in any events from this channel! Create one with ^newRaid!")
         elif sub=='soon':
             await c6.send_typing(msg.message.channel)
             await asyncio.sleep(3)
-            raidList=list()
-            for raid in raidDict['raids']: 
+            eventList=list()
+            for event in eventDict['events']: 
                 now=time.time()
-                if (raid['channel']==msg.message.channel): 
-                    if (raid['start'] is not None):
-                        if (raid['start']>now) and ((int(raid['start'])-int(now))<=1800):
-                            raidList.append(raid)
-            if len(raidList)>=1: 
-                card=c6embed.createBoardEmbed(raidList)
+                if (event['channel']==msg.message.channel): 
+                    if (event['start'] is not None):
+                        if (event['start']>now) and ((int(event['start'])-int(now))<=1800):
+                            eventList.append(event)
+            if len(eventList)>=1: 
+                card=c6embed.createBoardEmbed(eventList)
                 await c6.send_message(msg.message.channel, '', embed=card)
             else:
-                c6.say("No raids starting within 15 minutes for this channel! Create one with ^newRaid!")
+                c6.say("No events starting within 15 minutes for this channel! Create one with ^newRaid!")
         elif sub=='vacancy':
             await c6.send_typing(msg.message.channel)
             await asyncio.sleep(2)
-            raidList=list()
-            for raid in raidDict['raids']: 
-                if (len(raid['players']) < 6) and (raid['channel']==msg.message.channel):
-                    raidList.append(raid)
-            if len(raidList)>0: 
-                card=c6embed.createBoardEmbed(raidList)
+            eventList=list()
+            for event in eventDict['events']: 
+                if (len(event['players']) < 6) and (event['channel']==msg.message.channel):
+                    eventList.append(event)
+            if len(eventList)>0: 
+                card=c6embed.createBoardEmbed(eventList)
                 await c6.send_message(msg.message.channel, '', embed=card)
             else:
-                c6.say("No raids with vacant spots in this channel! Create a new one with ^newRaid!")
+                c6.say("No events with vacant spots in this channel! Create a new one with ^newRaid!")
     else:
-        for raid in raidDict['raids']:
-            if (raid['complete'] == False) and (raid['channel']==msg.message.channel): 
-                await updateRaid(raid)
+        for event in eventDict['events']:
+            if (event['complete'] == False) and (event['channel']==msg.message.channel): 
+                await updateEvent(event)
 async def createAdv(data):
     for emoji in reactEmoji[data['game']]:
         print(emoji)
     channel=data['channel']
     if data['complete']:
-        card=c6embed.closeRaidEmbed(data)
+        card=c6embed.closeEventEmbed(data)
     else:
         card=c6embed.createAdvEmbed(data)
-    raidPost=await c6.send_message(channel, '', embed=card)
-    print("id inside createPost: %s" % raidPost.id)
+    eventPost=await c6.send_message(channel, '', embed=card)
+    print("id inside createPost: %s" % eventPost.id)
     if data['complete']:
-        return raidPost
+        return eventPost
     else:
         for emoji in reactEmoji[data['game']]:
-            await c6.add_reaction(raidPost, emoji)
+            await c6.add_reaction(eventPost, emoji)
         if ((data['start']-time.time())>=0) and ((data['start']-time.time())<1800):
             for emoji in reactEmoji['util']:
-                await c6.add_reaction(raidPost, emoji)                
-    return raidPost
-async def updateRaid(data):
-    global posts, raidDict
+                await c6.add_reaction(eventPost, emoji)                
+    return eventPost
+async def updateEvent(data):
+    global posts, eventDict
     posts.remove(data['message'].id)
     await c6.delete_message(data['message'])
     data['message']=await createAdv(data)
     if data['complete'] == True:
-        raidDict['raids'].remove(data)
+        eventDict['events'].remove(data)
         await asyncio.sleep(30)
         await c6.delete_message(data['message'])
     else:
         posts.append(data['message'].id)
-    pickleWriter(raidFile, raidDict)
+    pickleWriter(eventFile, eventDict)
 @c6.event
 async def on_reaction_add(reaction, user):
     global posts
-    data=None
     if reaction.message.id in posts: 
         print(posts)
         member=reaction.message.server.get_member(user.id)
@@ -267,39 +264,38 @@ async def on_reaction_add(reaction, user):
             print("member id inside on_reaction_add %s" %member.id )
             await c6.remove_reaction(message=reaction.message, emoji=reaction.emoji, member=member )
             update=None
-            for raid in raidDict['raids']:
-                if raid['message'].id==reaction.message.id:
-                    update=await parseReaction(emoji, member, raid)
+            for event in eventDict['events']:
+                if event['message'].id==reaction.message.id:
+                    update=await parseReaction(emoji, member, event)
                     if (update!=None) and (update):
-                        await updateRaid(update)
-async def getOfflineReactions(raid):
+                        await updateEvent(update)
+async def getOfflineReactions(event):
     reactObj=list()
-    for emoji in reactEmoji[raid['game']]:
-        reaction=discord.Reaction(message=raid['message'], emoji=emoji)
+    for emoji in reactEmoji[event['game']]:
+        reaction=discord.Reaction(message=event['message'], emoji=emoji)
         reactObj.append(reaction)
-    print('getting offline reactions for %s' % raid['raidID'])
+    print('getting offline reactions for %s' % event['eventID'])
     update=None
     for reaction in reactObj:
         print("parsing %s reactions" % reaction.emoji.name)
         users=await c6.get_reaction_users(reaction, limit=100)
         for user in users:
-            if user != raid['bot']:
-                print('parsing %s reaction from %s on raid post %s' 
-                      % (reaction.emoji.name, user.name, raid['raidID']))
+            if user != event['bot']:
+                print('parsing %s reaction from %s on event post %s' 
+                      % (reaction.emoji.name, user.name, event['eventID']))
                 member=reaction.message.server.get_member(user.id)
                 emoji=reaction.emoji
                 message=reaction.message
                 await c6.remove_reaction(message=message, emoji=emoji, member=member)
                 if update!=False:
-                    print('297')
                     old=copy.deepcopy(update)
-                    update=await parseReaction(emoji, member, raid)
+                    update=await parseReaction(emoji, member, event)
                     if update==None: 
                         update=old
             else: 
                 print('ignoring self-reaction')
     if update and (update != None):
-        await updateRaid(update)
+        await updateEvent(update)
 async def parseReaction(emoji, member, data):
     if emoji.name=='brooksphone':
         await remind(data)
@@ -307,13 +303,13 @@ async def parseReaction(emoji, member, data):
         print('%s icon in recognized reaction emoji' % emoji.name)
         if (emoji.name =='darkness') or (emoji.name=='cl4ptp'):
             if data['leader'].id==member.id:
-                print('member is raid leader')
+                print('member is event leader')
                 data['complete']=True
                 if len(data['players'])>=1:
-                    await updateRaid(data)
+                    await updateEvent(data)
                 else:
                     await c6.delete_message(data['message'])
-                print('raid lost in the dark corners of time')
+                print('event lost in the dark corners of time')
                 return False
             else:
                 return None 
@@ -321,7 +317,7 @@ async def parseReaction(emoji, member, data):
             userTuple=(member, emoji)
             print(len(data['players'])-1)    
             if userTuple in data['players']:
-                print('removing %s: %s from raid' % (userTuple[0].name, userTuple[1].name))
+                print('removing %s: %s from event' % (userTuple[0].name, userTuple[1].name))
                 data['players'].remove(userTuple)
                 return data
             if userTuple in data['players']:
@@ -333,7 +329,7 @@ async def parseReaction(emoji, member, data):
                     data['players'][indx]=userTuple
                     return data
             if len(data['players'])<data['teamSize']:
-                print('adding %s: %s to raid' % (userTuple[0].name, userTuple[1].name))
+                print('adding %s: %s to event' % (userTuple[0].name, userTuple[1].name))
                 data['players'].append(userTuple)
                 return data
     else:
