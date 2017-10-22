@@ -67,7 +67,6 @@ async def on_ready():
         eventIDs=list()
         for event in eventDict['events']:
             if event['complete']==False:
-                msg=event['message'].id
                 message=await c6.get_message(event['message'].channel, id=event['message'].id)                
                 c6.messages.append(message)
                 posts.append(event['message'].id)
@@ -143,7 +142,7 @@ async def makeEvent(message, start, Type, game):
     eventIDs.append(data['eventID'])
     pickleWriter(eventFile, eventDict)
 async def remind(event): 
-    if (len(event['players'])>0) and ((event['start']-time.time())>0):
+    if (len(event['players'])>0) and (event['start']>time.time()):
         await c6.send_typing(event['channel'])
         await asyncio.sleep(5)
         reminderString="%s event reminder! players: " % event['type']
@@ -152,69 +151,34 @@ async def remind(event):
         start=datetime.datetime.fromtimestamp(event['start']).strftime('%I:%m%p %a')
         reminderString=reminderString+'Leader:%s starting at %s.' % (event['leader'].mention, start)
         await c6.send_message(event['channel'], reminderString)
+def showChecks(event, author):
+    checks={
+        'board':True,
+        'soon':((event['start'] is not None) and (event['start']>time.time()) and (int(event['start'])-int(time.time())<1800)),
+        'vacancy':(len(event['players']) < event['teamSize']),
+        'mine':((event['leader']==author) or (author in event['players']))
+        }
+    return checks
 @c6.command(pass_context=True)
 async def show(msg, sub=None):
     if sub!=None: 
+        await c6.send_typing(msg.message.channel)
+        await asyncio.sleep(5)
+        eventList=list()
         if sub in eventIDs:
             for event in eventDict['events']:
-                if event['eventID']==sub:
+                if (event['eventID']==sub) and (msg.message.channel==event['channel']):
                     await updateEvent(event)
-        elif sub=='board':
-            await c6.send_typing(msg.message.channel)
-            await asyncio.sleep(3)
-            eventList=list()
-            for event in eventDict['events']: 
-                if event['channel']==msg.message.channel: 
+        elif sub in ['soon', 'vacancy', 'board', 'mine']:
+            for event in eventDict['events']:
+                checks=showChecks(event, msg.message.author)
+                if (event['channel']==msg.message.channel) and checks[sub]:          
                     eventList.append(event)
             if len(eventList)>0: 
                 card=c6embed.createBoardEmbed(eventList)
                 await c6.send_message(msg.message.channel, '', embed=card)
             else:
-                c6.say('No events found for this channel! Create one with ^newRaid!')
-        elif sub=='mine':
-            await c6.send_typing(msg.message.channel)
-            await asyncio.sleep(5)
-            eventList=list()
-            for event in eventDict['events']: 
-                if (event['channel']==msg.message.channel):
-                    if (event['leader']==msg.message.author): 
-                        eventList.append(event)
-                    else:
-                        for playerTuple in event['players']:
-                            if playerTuple[0]==msg.message.author: 
-                                eventList.append(event)
-            if len(eventList)>0: 
-                card=c6embed.createBoardEmbed(eventList)
-                await c6.send_message(msg.message.channel, '', embed=card)
-            else:
-                c6.say("You don't seem to be involved in any events from this channel! Create one with ^newRaid!")
-        elif sub=='soon':
-            await c6.send_typing(msg.message.channel)
-            await asyncio.sleep(3)
-            eventList=list()
-            for event in eventDict['events']: 
-                now=time.time()
-                if (event['channel']==msg.message.channel): 
-                    if (event['start'] is not None):
-                        if (event['start']>now) and ((int(event['start'])-int(now))<=1800):
-                            eventList.append(event)
-            if len(eventList)>=1: 
-                card=c6embed.createBoardEmbed(eventList)
-                await c6.send_message(msg.message.channel, '', embed=card)
-            else:
-                c6.say("No events starting within 15 minutes for this channel! Create one with ^newRaid!")
-        elif sub=='vacancy':
-            await c6.send_typing(msg.message.channel)
-            await asyncio.sleep(2)
-            eventList=list()
-            for event in eventDict['events']: 
-                if (len(event['players']) < 6) and (event['channel']==msg.message.channel):
-                    eventList.append(event)
-            if len(eventList)>0: 
-                card=c6embed.createBoardEmbed(eventList)
-                await c6.send_message(msg.message.channel, '', embed=card)
-            else:
-                c6.say("No events with vacant spots in this channel! Create a new one with ^newRaid!")
+                c6.say('No events found for this channel! Create one with Cayde-6!')
     else:
         for event in eventDict['events']:
             if (event['complete'] == False) and (event['channel']==msg.message.channel): 
